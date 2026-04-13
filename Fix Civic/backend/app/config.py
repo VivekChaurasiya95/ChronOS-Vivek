@@ -60,3 +60,13 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+if settings.DATABASE_URL:
+    if settings.DATABASE_URL.startswith("postgres://") or settings.DATABASE_URL.startswith("postgresql://"):
+        settings.DATABASE_URL = settings.DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+        settings.DATABASE_URL = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+        if "?" in settings.DATABASE_URL:
+            base_url = settings.DATABASE_URL.split("?")[0]
+        else:
+            base_url = settings.DATABASE_URL
+        settings.DATABASE_URL = f"{base_url}?ssl=require"
