@@ -1,5 +1,7 @@
 # ChronalLabs – Civic Technology Initiative (GSoC 2026)
 
+🌐 **Website:** [https://chronallab-site.vercel.app/](https://chronallab-site.vercel.app/)
+
 ## Overview
 
 ChronalLabs is an open-source civic-technology initiative focused on building practical, scalable tools that solve real-world public challenges.
@@ -58,7 +60,7 @@ Each project is scoped to be achievable within the GSoC timeline while remaining
 
 # Project Portfolio
 
-Below are the major project tracks under ChronalLabs.
+Below are the major project tracks under ChronalLabs. For a live overview, visit the [ChronalLabs website](https://chronallab-site.vercel.app/).
 
 ---
 
