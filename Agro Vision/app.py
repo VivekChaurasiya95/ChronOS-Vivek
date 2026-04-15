@@ -7,7 +7,7 @@ app = Flask(__name__)
 # =========================
 # Replace with your API Key
 # =========================
-API_KEY = "8f554542bd68933d8c57355a0edbd308"
+API_KEY = "xyz"
 
 
 # =========================
