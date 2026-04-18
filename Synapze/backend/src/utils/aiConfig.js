@@ -1,208 +1,132 @@
 /**
  * AI Configuration Module
- * Manages Ollama connection and AI model settings
+ * Manages Groq AI connection and model settings
  */
 
-import axios from "axios";
-import logger from "../config/logger.js";
+import Groq from 'groq-sdk';
+import logger from '../config/logger.js';
 
-// Ollama Configuration
-const OLLAMA_CONFIG = {
-  host: process.env.OLLAMA_HOST || "http://localhost:11434",
-  model: process.env.AI_MODEL || "mistral",
-  timeout: parseInt(process.env.AI_TIMEOUT || "30000", 10),
-  maxTokens: parseInt(process.env.AI_MAX_TOKENS || "1024", 10),
-  temperature: parseFloat(process.env.AI_TEMPERATURE || "0.7"),
+// Groq Configuration
+const GROQ_CONFIG = {
+  apiKey: process.env.GROQ_API_KEY?.trim(),
+  model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+  timeout: parseInt(process.env.GROQ_TIMEOUT || '30000', 10),
+  maxTokens: parseInt(process.env.GROQ_MAX_TOKENS || '1024', 10),
+  temperature: parseFloat(process.env.GROQ_TEMPERATURE || '0.7'),
 };
 
-// Create Ollama API client
-const ollamaClient = axios.create({
-  baseURL: OLLAMA_CONFIG.host,
-  timeout: OLLAMA_CONFIG.timeout,
-  headers: {
-    "Content-Type": "application/json",
-  },
+// Initialize Groq client
+const groqClient = new Groq({
+  apiKey: GROQ_CONFIG.apiKey,
 });
 
 /**
- * Check if Ollama service is available
+ * Check if Groq service is available
+ * @returns {Promise<boolean>} - Connection status
  */
-export const checkOllamaHealth = async () => {
+export const checkAIConnection = async () => {
+  if (!GROQ_CONFIG.apiKey) {
+    logger.error('Groq API key not configured');
+    return false;
+  }
+
   try {
-    const response = await ollamaClient.get("/api/tags");
-    logger.info("Ollama service is healthy", {
-      models: response.data.models?.length || 0,
+    // Simple health check by attempting a minimal request
+    await groqClient.chat.completions.create({
+      messages: [{ role: 'user', content: 'Hello' }],
+      model: GROQ_CONFIG.model,
+      max_tokens: 1,
     });
+    logger.info('Groq service is healthy');
     return true;
   } catch (error) {
-    logger.error("Ollama service health check failed", {
+    logger.error('Groq service health check failed', {
       error: error.message,
-      host: OLLAMA_CONFIG.host,
+      model: GROQ_CONFIG.model,
     });
+
+    // Handle specific error types
+    if (error.status === 401) {
+      logger.error('Invalid Groq API key');
+    } else if (error.status === 429) {
+      logger.error('Groq rate limit exceeded');
+    } else if (error.code === 'ECONNREFUSED' || error.message.includes('fetch')) {
+      logger.error('Cannot connect to Groq API');
+    }
+
     return false;
   }
 };
 
 /**
- * Send request to Ollama AI model
+ * Generate AI response using Groq
  * @param {string} prompt - The prompt to send to the model
  * @param {object} options - Generation options
  * @returns {Promise<string>} - AI model response
  */
 export const generateAIResponse = async (prompt, options = {}) => {
-  try {
-    const requestPayload = {
-      model: OLLAMA_CONFIG.model,
-      prompt: prompt,
-      stream: false,
-      temperature: options.temperature || OLLAMA_CONFIG.temperature,
-      top_p: options.topP || 0.9,
-      top_k: options.topK || 40,
-      num_predict: options.numPredict || OLLAMA_CONFIG.maxTokens,
-    };
+  if (!GROQ_CONFIG.apiKey) {
+    throw new Error('Missing Groq API key. Set GROQ_API_KEY in environment variables.');
+  }
 
-    logger.info("Sending request to Ollama", {
-      model: OLLAMA_CONFIG.model,
+  try {
+    logger.info('Sending request to Groq', {
+      model: GROQ_CONFIG.model,
       promptLength: prompt.length,
-      host: OLLAMA_CONFIG.host,
     });
 
-    const response = await ollamaClient.post("/api/generate", requestPayload);
+    const response = await groqClient.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: GROQ_CONFIG.model,
+      temperature: options.temperature ?? GROQ_CONFIG.temperature,
+      max_tokens: options.numPredict ?? GROQ_CONFIG.maxTokens,
+    });
 
-    if (!response.data || !response.data.response) {
-      const errorMsg = `Invalid response from Ollama: ${JSON.stringify(response.data)}`;
-      logger.error(errorMsg);
+    const content = response.choices[0]?.message?.content;
+
+    if (!content) {
+      const errorMsg = 'Invalid response from Groq: No content received';
+      logger.error(errorMsg, { response });
       throw new Error(errorMsg);
     }
 
-    logger.info("Received response from Ollama", {
-      responseLength: response.data.response.length,
+    logger.info('Received response from Groq', {
+      responseLength: content.length,
     });
 
-    return response.data.response.trim();
+    return content.trim();
   } catch (error) {
-    logger.error("Error generating AI response", {
+    logger.error('Error generating AI response', {
       error: error.message,
-      model: OLLAMA_CONFIG.model,
-      host: OLLAMA_CONFIG.host,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      errorData: error.response?.data,
+      model: GROQ_CONFIG.model,
+      status: error.status,
     });
 
-    // Provide more context about the error
-    if (
-      error.code === "ECONNREFUSED" ||
-      error.message.includes("ECONNREFUSED")
-    ) {
-      throw new Error(
-        `Cannot connect to Ollama at ${OLLAMA_CONFIG.host}. Please start Ollama service.`,
-      );
+    // Handle specific error types
+    if (error.status === 401) {
+      throw new Error('Invalid Groq API key. Please check your GROQ_API_KEY environment variable.');
     }
 
-    if (error.response?.status === 404 || error.message.includes("model")) {
-      throw new Error(
-        `Ollama model '${OLLAMA_CONFIG.model}' not found. Please pull it using: ollama pull ${OLLAMA_CONFIG.model}`,
-      );
+    if (error.status === 429) {
+      throw new Error('Groq rate limit exceeded. Please try again later.');
     }
 
-    if (error.code === "ENOTFOUND") {
-      throw new Error(
-        `Cannot reach Ollama host: ${OLLAMA_CONFIG.host}. Check your OLLAMA_HOST environment variable.`,
-      );
+    if (error.status === 404) {
+      throw new Error(`Groq model '${GROQ_CONFIG.model}' not found. Please verify GROQ_MODEL environment variable.`);
     }
 
-    throw new Error(`Ollama Error: ${error.message}`);
-  }
-};
+    if (error.code === 'ECONNREFUSED' || error.message.includes('fetch') || error.message.includes('network')) {
+      throw new Error('Cannot connect to Groq API. Please check your internet connection and GROQ_API_KEY.');
+    }
 
-/**
- * Stream AI response (for real-time output)
- * @param {string} prompt - The prompt to send
- * @param {function} onData - Callback for each token
- * @param {object} options - Generation options
- */
-export const streamAIResponse = async (prompt, onData, options = {}) => {
-  try {
-    const requestPayload = {
-      model: OLLAMA_CONFIG.model,
-      prompt: prompt,
-      stream: true,
-      temperature: options.temperature || OLLAMA_CONFIG.temperature,
-    };
-
-    const response = await ollamaClient.post("/api/generate", requestPayload, {
-      responseType: "stream",
-    });
-
-    response.data.on("data", (chunk) => {
-      try {
-        const lines = chunk.toString().split("\n");
-        lines.forEach((line) => {
-          if (line.trim()) {
-            const data = JSON.parse(line);
-            if (data.response) {
-              onData(data.response);
-            }
-          }
-        });
-      } catch (error) {
-        logger.error("Error parsing stream data", { error: error.message });
-      }
-    });
-
-    response.data.on("error", (error) => {
-      logger.error("Stream error", { error: error.message });
-    });
-
-    return new Promise((resolve, reject) => {
-      response.data.on("end", () => resolve());
-      response.data.on("error", reject);
-    });
-  } catch (error) {
-    logger.error("Error streaming AI response", { error: error.message });
-    throw error;
-  }
-};
-
-/**
- * Get Ollama model list
- * @returns {Promise<array>} - List of available models
- */
-export const getAvailableModels = async () => {
-  try {
-    const response = await ollamaClient.get("/api/tags");
-    return response.data.models || [];
-  } catch (error) {
-    logger.error("Error fetching available models", { error: error.message });
-    return [];
-  }
-};
-
-/**
- * Test AI connection
- * @returns {Promise<boolean>} - Connection status
- */
-export const testAIConnection = async () => {
-  try {
-    const prompt = 'Say "OK" to confirm connection.';
-    const response = await generateAIResponse(prompt, {
-      temperature: 0.1,
-      numPredict: 50,
-    });
-    return response.toLowerCase().includes("ok");
-  } catch (error) {
-    logger.error("AI connection test failed", { error: error.message });
-    return false;
+    // Generic error
+    throw new Error(`Groq API error: ${error.message}`);
   }
 };
 
 export default {
-  ollamaClient,
-  OLLAMA_CONFIG,
-  checkOllamaHealth,
+  GROQ_CONFIG,
+  groqClient,
+  checkAIConnection,
   generateAIResponse,
-  streamAIResponse,
-  getAvailableModels,
-  testAIConnection,
 };
