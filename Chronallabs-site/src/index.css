@@ -1,0 +1,293 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-white text-black overflow-x-hidden;
+  }
+}
+
+/* Custom Styles moved from index.html */
+* {
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Reveal System */
+.reveal-mask {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  overflow: visible;
+  position: relative;
+}
+
+.reveal-item {
+  transform: translateY(115%);
+  transition: transform 1.2s cubic-bezier(0.19, 1, 0.22, 1);
+  display: block;
+}
+
+.visible .reveal-item {
+  transform: translateY(0);
+}
+
+/* Staggered Reveal Children */
+.stagger-child {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 1.2s cubic-bezier(0.19, 1, 0.22, 1), transform 1.2s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.visible .stagger-child {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.visible .stagger-delay-1 {
+  transition-delay: 100ms;
+}
+
+.visible .stagger-delay-2 {
+  transition-delay: 200ms;
+}
+
+.visible .stagger-delay-3 {
+  transition-delay: 300ms;
+}
+
+.visible .stagger-delay-4 {
+  transition-delay: 400ms;
+}
+
+/* Narrative Progress Sidebar */
+.narrative-rail {
+  position: fixed;
+  left: 40px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 200px;
+  width: 1px;
+  background: rgba(0, 0, 0, 0.05);
+  z-index: 100;
+}
+
+.narrative-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: #10b981;
+  transition: height 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* Section Entrance Transitions */
+section {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 1.4s cubic-bezier(0.19, 1, 0.22, 1), transform 1.4s cubic-bezier(0.19, 1, 0.22, 1);
+  will-change: transform, opacity;
+}
+
+section.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.section-num {
+  font-size: clamp(6rem, 20vw, 30vw);
+  font-weight: 900;
+  line-height: 0.8;
+  opacity: 0.015;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  letter-spacing: -0.05em;
+  z-index: 0;
+  transition: transform 0.2s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* Blinking Cursor */
+@keyframes blink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
+}
+
+.cursor-blink {
+  animation: blink 3.5s infinite;
+  display: inline-block;
+  margin-left: 2px;
+  transition: transform 0.4s ease;
+}
+
+.group:hover .cursor-blink {
+  transform: translateX(4px);
+}
+
+/* System Button Corners */
+.system-btn-corner {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-color: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+  transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.corner-tl {
+  top: 0;
+  left: 0;
+  border-top: 1px solid;
+  border-left: 1px solid;
+}
+
+.corner-tr {
+  top: 0;
+  right: 0;
+  border-top: 1px solid;
+  border-right: 1px solid;
+}
+
+.corner-bl {
+  bottom: 0;
+  left: 0;
+  border-bottom: 1px solid;
+  border-left: 1px solid;
+}
+
+.corner-br {
+  bottom: 0;
+  right: 0;
+  border-bottom: 1px solid;
+  border-right: 1px solid;
+}
+
+.btn-system-cmd:hover .system-btn-corner {
+  width: 12px;
+  height: 12px;
+  border-color: #10b981;
+}
+
+/* Animations */
+@keyframes slow-float {
+
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-15px) rotate(3deg);
+  }
+}
+
+.animate-slow-float {
+  animation: slow-float 15s ease-in-out infinite;
+}
+
+@keyframes slow-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-slow-rotate {
+  animation: slow-rotate 40s linear infinite;
+}
+
+@keyframes slow-rotate-reverse {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+.animate-slow-rotate-reverse {
+  animation: slow-rotate-reverse 50s linear infinite;
+}
+
+@keyframes pulse-gentle {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.05;
+  }
+
+  50% {
+    transform: scale(1.03);
+    opacity: 0.1;
+  }
+}
+
+.animate-pulse-node {
+  animation: pulse-gentle 6s ease-in-out infinite;
+}
+
+@keyframes line-osc {
+
+  0%,
+  100% {
+    width: 70px;
+  }
+
+  50% {
+    width: 110px;
+  }
+}
+
+.animate-line-osc {
+  animation: line-osc 10s ease-in-out infinite;
+}
+
+.ease-out-expo {
+  transition-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #10b981;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #059669;
+}
+
+/* Schematic Grid Background */
